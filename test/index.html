@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>프롬프트 생성 마법사</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Pretendard", "Noto Sans KR", sans-serif;
+    }
+
+    /* 👉 여기서 배경 이미지를 사용 */
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background-image: url("background.jpg"); /* 파일 이름만 맞춰줘 */
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      color: #222;
+      position: relative;
+    }
+
+    /* 배경 위에 살짝 어두운 오버레이 넣어서 내용이 더 잘 보이게 */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at top left, rgba(0,0,0,0.25), rgba(0,0,0,0.55));
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 900px;
+    }
+
+    .card {
+      position: relative;
+      width: 100%;
+      background: linear-gradient(135deg, rgba(255,255,255,0.92), rgba(255,255,255,0.86));
+      border-radius: 28px;
+      padding: 28px 32px 32px;
+      box-shadow:
+        0 18px 45px rgba(0, 0, 0, 0.45),
+        0 0 0 1px rgba(255, 255, 255, 0.35);
+      overflow: hidden;
+      backdrop-filter: blur(18px);
+    }
+
+    /* 카드 안쪽 장식 느낌 (살짝 빛나는 레이어) */
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background:
+        radial-gradient(circle at 0% 0%, rgba(255, 255, 255, 0.55) 0, transparent 55%),
+        linear-gradient(115deg, rgba(255, 161, 179, 0.45), rgba(255, 243, 176, 0.35), rgba(170, 210, 255, 0.45));
+      opacity: 0.7;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .step-label {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: rgba(0,0,0,0.75);
+    }
+
+    .chip {
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      background: rgba(255,255,255,0.9);
+      border: 1px solid rgba(255,255,255,0.9);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .chip-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #ffb400;
+    }
+
+    .question {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: #222;
+    }
+
+    .options {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+    }
+
+    .option-btn {
+      border: none;
+      outline: none;
+      padding: 12px 16px;
+      border-radius: 999px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.98);
+      box-shadow:
+        0 6px 14px rgba(0,0,0,0.16),
+        0 0 0 1px rgba(255,255,255,0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition:
+        transform 0.12s ease-out,
+        box-shadow 0.12s ease-out,
+        background 0.12s ease-out;
+      white-space: nowrap;
+    }
+
+    .option-btn:hover {
+      transform: translateY(-1px);
+      background: #fff;
+      box-shadow:
+        0 10px 22px rgba(0,0,0,0.22),
+        0 0 0 1px rgba(255,255,255,1);
+    }
+
+    .option-btn:active {
+      transform: translateY(0);
+      box-shadow:
+        0 4px 10px rgba(0,0,0,0.12),
+        0 0 0 1px rgba(255,255,255,0.9);
+    }
+
+    .textarea-wrapper {
+      margin-top: 8px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 120px;
+      border-radius: 18px;
+      border: none;
+      padding: 14px 16px;
+      font-size: 0.95rem;
+      resize: vertical;
+      box-shadow:
+        inset 0 0 0 1px rgba(0,0,0,0.05),
+        0 4px 16px rgba(0,0,0,0.08);
+      background: rgba(255,255,255,0.98);
+      outline: none;
+    }
+
+    textarea:focus {
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 140, 180, 0.9),
+        0 4px 18px rgba(255, 140, 180, 0.35);
+    }
+
+    .primary-btn {
+      margin-top: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 24px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #fff;
+      background: linear-gradient(135deg, #ff7eb3, #ffb86c);
+      box-shadow: 0 8px 20px rgba(255, 126, 179, 0.5);
+      transition:
+        transform 0.12s ease-out,
+        box-shadow 0.12s ease-out,
+        filter 0.12s ease-out;
+    }
+
+    .primary-btn:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.03);
+      box-shadow: 0 12px 26px rgba(255, 126, 179, 0.6);
+    }
+
+    .primary-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 6px 16px rgba(255, 126, 179, 0.4);
+    }
+
+    .helper {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      color: rgba(0,0,0,0.7);
+    }
+
+    .final-wrapper {
+      margin-top: 8px;
+    }
+
+    .final-label {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: rgba(0,0,0,0.7);
+      margin-bottom: 6px;
+    }
+
+    .final-box {
+      border-radius: 18px;
+      padding: 14px 16px;
+      background: rgba(255,255,255,0.98);
+      box-shadow:
+        inset 0 0 0 1px rgba(0,0,0,0.04),
+        0 4px 16px rgba(0,0,0,0.06);
+      font-size: 0.95rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+
+    .card-footer {
+      margin-top: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      color: rgba(0,0,0,0.6);
+    }
+
+    .back-btn {
+      border: none;
+      background: transparent;
+      font-size: 0.8rem;
+      cursor: pointer;
+      color: rgba(0,0,0,0.7);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 0;
+    }
+
+    .back-btn[disabled] {
+      opacity: 0.25;
+      cursor: default;
+    }
+
+    .back-btn:not(:disabled):hover {
+      color: rgba(0,0,0,0.9);
+    }
+
+    @media (max-width: 640px) {
+      .card {
+        padding: 22px 20px 24px;
+        border-radius: 22px;
+      }
+      .question {
+        font-size: 1.03rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <div class="card">
+      <header class="card-header">
+        <div class="step-label" id="stepLabel">Step 1 / 5</div>
+        <div class="chip">
+          <span class="chip-dot"></span>
+          <span>KB Tech Forum · Prompt Wizard</span>
+        </div>
+      </header>
+
+      <main id="content">
+        <!-- JS에서 채워 넣음 -->
+      </main>
+
+      <footer class="card-footer">
+        <button class="back-btn" id="backBtn">
+          ← 이전으로
+        </button>
+        <span id="progressText">질문에 차례대로 답해주세요 ✨</span>
+      </footer>
+    </div>
+  </div>
+
+  <script>
+    const TOTAL_STEPS = 5;
+    let step = 1;
+    const answers = [];
+
+    const stepLabel = document.getElementById('stepLabel');
+    const content = document.getElementById('content');
+    const backBtn = document.getElementById('backBtn');
+    const progressText = document.getElementById('progressText');
+
+    const stepData = {
+      1: {
+        question: 'Q1. 어떤 페이지를 만들고 싶으신가요?',
+        options: ['📝 일정 관리', '🎮 레이싱 게임', '💵 환율 보기', '🔮 오늘의 운세']
+      },
+      2: {
+        question: 'Q2. 어떤 스타일의 UI를 좋아하시나요?',
+        options: ['✨ 깔끔한 스타일', '🧸 귀여운 스타일', '⚡ 트렌디한 느낌', '🎮 레트로 스타일']
+      },
+      3: {
+        question: 'Q3. 색감은 어떤 계열을 원하시나요?',
+        options: ['🎨 파스텔톤', '🧡 네온(사이버펑크)', '🖤 다크모드', '🤍 라이트 모드']
+      }
+    };
+
+    function render() {
+      stepLabel.textContent = `Step ${step} / ${TOTAL_STEPS}`;
+      backBtn.disabled = step === 1;
+
+      if (step <= 3) {
+        const { question, options } = stepData[step];
+        content.innerHTML = `
+          <h2 class="question">${question}</h2>
+          <div class="options">
+            ${options
+              .map(
+                (text) =>
+                  `<button class="option-btn" data-value="${text.replace(/"/g, '&quot;')}">${text}</button>`
+              )
+              .join('')}
+          </div>
+        `;
+        progressText.textContent = '버튼을 눌러 다음 단계로 이동해 주세요 👍';
+
+        document.querySelectorAll('.option-btn').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const value = btn.getAttribute('data-value');
+            answers.push(value);
+            step = Math.min(step + 1, TOTAL_STEPS);
+            render();
+          });
+        });
+      } else if (step === 4) {
+        content.innerHTML = `
+          <h2 class="question">Q4. 추가하고 싶은 요소를 자유롭게 적어주세요!</h2>
+          <div class="textarea-wrapper">
+            <textarea id="extraInput" placeholder="예) 이모지 많이 쓰기, 카드 슬라이더, 마우스 hover 애니메이션 등"></textarea>
+            <button class="primary-btn" id="generateBtn">✨ 프롬프트 생성</button>
+            <div class="helper">지금까지 선택한 내용과 함께 한 문장으로 합쳐 드릴게요.</div>
+          </div>
+        `;
+        progressText.textContent = '추가로 원하는 요소를 자유롭게 적어주세요 📝';
+
+        document.getElementById('generateBtn').addEventListener('click', () => {
+          const extra = document.getElementById('extraInput').value.trim();
+          if (extra) {
+            answers.push(extra);
+          }
+          step = 5;
+          render();
+        });
+      } else if (step === 5) {
+        const finalText = answers.join(' ');
+        content.innerHTML = `
+          <h2 class="question">완성된 프롬프트 문장은 아래와 같아요.</h2>
+          <div class="final-wrapper">
+            <div class="final-label">생성된 프롬프트</div>
+            <div class="final-box" id="finalBox">${finalText || '아직 선택된 내용이 없어요 😅'}</div>
+            <button class="primary-btn" id="runBtn">🔧 실행하러 가기</button>
+            <div class="helper">위 문장을 복사해서 Cursor IDE 또는 원하는 AI 도구에 붙여넣어 사용하시면 됩니다.</div>
+          </div>
+        `;
+        progressText.textContent = '프롬프트가 준비되었습니다 🎉';
+
+        document.getElementById('runBtn').addEventListener('click', () => {
+          const box = document.getElementById('finalBox');
+          const selection = window.getSelection();
+          const range = document.createRange();
+          range.selectNodeContents(box);
+          selection.removeAllRanges();
+          selection.addRange(range);
+          try {
+            document.execCommand('copy');
+            progressText.textContent = '프롬프트를 클립보드에 복사했어요 ✅';
+          } catch {
+            progressText.textContent = '복사가 안되면 직접 드래그해서 복사해 주세요 😊';
+          }
+        });
+      }
+    }
+
+    backBtn.addEventListener('click', () => {
+      if (step > 1) {
+        step -= 1;
+        if (answers.length >= step) {
+          answers.splice(step);
+        }
+        render();
+      }
+    });
+
+    render();
+  </script>
+</body>
+</html>
